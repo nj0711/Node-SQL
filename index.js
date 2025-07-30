@@ -3,109 +3,108 @@ const app = express();
 const path = require("path");
 const { v4: uuid } = require("uuid");
 const methodOverride = require("method-override");
-const mysql = require("mysql2");
+const mysql = require("mysql2/promise");
 const { faker } = require("@faker-js/faker");
 
 app.use(methodOverride("_method"));
 
-//for ejs
+// for ejs
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "/views"));
 
-//get data from form to encode in js
+// get data from form to encode in js
 app.use(express.urlencoded({ extended: true }));
 
-//mysql
-const connection = mysql.createConnection({
+// create mysql connection pool (better than single connection)
+const pool = mysql.createPool({
   host: "localhost",
   port: 3306,
   database: "nodesql",
   user: "root",
   password: "root",
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
 });
 
-//get all data and print
+// get all data and print
 app.get("/", async (req, res) => {
-  console.log("runing at home");
-
+  console.log("running at home");
   try {
-    connection.query("select * from user", (err, data) => {
-      // console.log(data);
-      res.render("users.ejs", { data });
-    });
+    const [data] = await pool.query("SELECT * FROM user");
+    res.render("users.ejs", { data });
   } catch (error) {
-    console.log("error");
+    console.error("Error fetching users:", error);
+    res.status(500).send("Internal Server Error");
   }
 });
 
-
-//insert data
+// insert data
 app.get("/user/new", async (req, res) => {
   res.render("new-user"); // renders views/new-user.ejs
 });
 
-app.post("/user", (req, res) => {
+app.post("/user", async (req, res) => {
   try {
     const id = uuid();
-    let { username, email, password, dob } = req.body;
-    user = [id, username, email, password, dob];
-    console.log(id, username, email, password, dob);
-
-    let qs = "insert into user values (?,?,?,?,?)";
-
-    connection.query(qs, user, (err, data) => {
-      if (err) throw err;
-      res.redirect("/");
-    });
+    const { username, email, password, dob } = req.body;
+    const query =
+      "INSERT INTO user (id, username, email, password, dob) VALUES (?, ?, ?, ?, ?)";
+    await pool.query(query, [id, username, email, password, dob]);
+    res.redirect("/");
   } catch (error) {
-    console.log(error);
+    console.error("Error inserting user:", error);
+    res.status(500).send("Failed to insert user");
   }
 });
 
-//edit data
-app.get("/user/:id/edit", (req, res) => {
+// edit data - show form
+app.get("/user/:id/edit", async (req, res) => {
   const { id } = req.params;
-  // console.log(id);
-
-  const query = "SELECT * FROM user WHERE id = ?";
-
-  connection.query(query, id, (err, results) => {
-    if (err || results.length === 0) {
+  try {
+    const [results] = await pool.query("SELECT * FROM user WHERE id = ?", [id]);
+    if (results.length === 0) {
       return res.status(404).send("User not found.");
     }
     const user = results[0];
     res.render("edit-user", { user });
-  });
+  } catch (error) {
+    console.error("Error fetching user for edit:", error);
+    res.status(500).send("Internal Server Error");
+  }
 });
 
-app.patch("/user/:id/edit", (req, res) => {
+// edit data - update record
+app.patch("/user/:id/edit", async (req, res) => {
   const userId = req.params.id;
   const { username, email, password, dob } = req.body;
-  const query =
-    "UPDATE user SET username = ?, email = ?, password = ?, dob = ? WHERE id = ?";
-
-  connection.query(
-    query,
-    [username, email, password, dob, userId],
-    (err, result) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).send("Failed to update user.");
-      }
-      res.redirect("/");
-    }
-  );
+  try {
+    const query =
+      "UPDATE user SET username = ?, email = ?, password = ?, dob = ? WHERE id = ?";
+    await pool.query(query, [username, email, password, dob, userId]);
+    res.redirect("/");
+  } catch (error) {
+    console.error("Failed to update user:", error);
+    res.status(500).send("Failed to update user.");
+  }
 });
 
-//delete data
-app.delete("/user/:id/delete", (req, res) => {
+// delete data
+app.delete("/user/:id/delete", async (req, res) => {
   const { id } = req.params;
-  // console.log(id);
-  let qs = `delete from user where id='${id}'`;
-  connection.query(qs, (err, data) => {
-    if (err) throw err;
+  try {
+    const query = "DELETE FROM user WHERE id = ?";
+    await pool.query(query, [id]);
     res.redirect("/");
-  });
+  } catch (error) {
+    console.error("Failed to delete user:", error);
+    res.status(500).send("Failed to delete user.");
+  }
+});
+
+// server listen
+app.listen(3000, () => {
+  console.log("server running...");
 });
 
 //fake data generator
@@ -131,7 +130,3 @@ app.delete("/user/:id/delete", (req, res) => {
 // } catch (err) {
 //   console.log(err);
 // }
-
-app.listen(3000, () => {
-  console.log("server running...");
-});
