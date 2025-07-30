@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>All Users</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f9f9f9;
+      padding: 40px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 30px;
+    }
+
+    .add-btn {
+      display: block;
+      margin: 0 auto 20px auto;
+      padding: 12px 25px;
+      font-size: 18px;
+      font-weight: bold;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .add-btn:hover {
+      background-color: #45a049;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    th, td {
+      text-align: left;
+      padding: 12px 15px;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th {
+      background-color: #4CAF50;
+      color: white;
+    }
+
+    tr:hover {
+      background-color: #f1f1f1;
+    }
+
+    .action-btn {
+      padding: 6px 14px;
+      font-size: 14px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .edit-btn {
+      background-color: #2196F3;
+      color: white;
+    }
+
+    .edit-btn:hover {
+      background-color: #0b7dda;
+    }
+
+    .delete-btn {
+      background-color: #f44336;
+      color: white;
+    }
+
+    .delete-btn:hover {
+      background-color: #d32f2f;
+    }
+
+    @media screen and (max-width: 768px) {
+      table, thead, tbody, th, td, tr {
+        display: block;
+      }
+
+      th {
+        position: sticky;
+        top: 0;
+        background-color: #4CAF50;
+      }
+
+      td {
+        padding-left: 50%;
+        position: relative;
+      }
+
+      td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 15px;
+        font-weight: bold;
+        white-space: nowrap;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>All Users</h1>
+
+  <button class="add-btn" id="new">+ Add New User</button>
+
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Password</th>
+        <th>DOB</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% for (const user of data) { %>
+        <tr>
+          <td data-label="ID"><%= user.id %></td>
+          <td data-label="Name"><%= user.username %></td>
+          <td data-label="Email"><%= user.email %></td>
+          <td data-label="Password"><%= user.password %></td>
+          <td data-label="DOB"><%= user.dob.toISOString().split('T')[0] %></td>
+          <td>
+            <form action="/user/<%= user.id %>/edit" method="get" style="display:inline;">
+              <button class="action-btn edit-btn" type="submit">Edit</button>
+            </form>
+            <form action="/user/<%= user.id %>/delete?_method=DELETE" method="POST" style="display:inline;">
+              <button class="action-btn delete-btn" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      <% } %>
+    </tbody>
+  </table>
+
+  <script>
+    document.getElementById("new").addEventListener("click", () => {
+      window.location.href = "/user/new";
+    });
+  </script>
+</body>
+</html>
